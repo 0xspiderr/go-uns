@@ -21,32 +21,36 @@ var orderStatusName = map[OrderStatus]string{
 	InProgress: "in_progress",
 }
 
-type ITData struct {
-	OrderID         int         `json:"order_id"`
-	OrderName       string      `json:"order_name"`
-	Status          OrderStatus `json:"order_status"`
-	ProductName     string      `json:"product_name"`
-	Quantity        int         `json:"quantity"`
-	ActiveOperators int         `json:"active_operators"`
+type Order struct {
+	OrderID         int    `json:"id,string"`
+	OrderName       string `json:"order_name"`
+	Status          string `json:"order_status"`
+	ProductName     string `json:"product_name"`
+	Quantity        int    `json:"quantity"`
+	ActiveOperators int    `json:"active_operators"`
 }
+
+type ITData []Order
 
 func fetchITData() (ITData, error) {
 	var it ITData
-	response, err := http.Get("http://localhost:8089/api/orders")
+	response, err := http.Get("http://localhost:3000/orders")
 	if err != nil {
 		return it, err
 	}
+	// debug response
 	defer response.Body.Close()
-
 	err = json.NewDecoder(response.Body).Decode(&it)
+
 	return it, err
 }
 
+/* IT mock data
 func itDataHandler(w http.ResponseWriter, r *http.Request) {
-	data := ITData{
+	data := Order{
 		OrderID:         1,
 		OrderName:       "mock_order_name",
-		Status:          InProgress,
+		Status:          "Pending",
 		ProductName:     "mock_product_name",
 		Quantity:        10,
 		ActiveOperators: 2,
@@ -54,6 +58,7 @@ func itDataHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)
 }
+*/
 
 func startITServer() {
 	http.HandleFunc("/api/orders", itDataHandler)
