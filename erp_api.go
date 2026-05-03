@@ -30,7 +30,6 @@ type ITData struct {
 	ActiveOperators int         `json:"active_operators"`
 }
 
-// Get mock data from the HTTP server
 func erpDataHandler(w http.ResponseWriter, r *http.Request) {
 	data := ITData{
 		OrderID:         1,

@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
@@ -19,11 +21,42 @@ type UNSData struct {
 	IT        ITData `json:"it_data"`
 }
 
+func fetchITData() (ITData, error) {
+	var it ITData
+	response, err := http.Get("http://localhost:8089/api/orders")
+	if err != nil {
+		return it, err
+	}
+	defer response.Body.Close()
+
+	err = json.NewDecoder(response.Body).Decode(&it)
+	return it, err
+}
+
 func mqttMsgHandler(client mqtt.Client, msg mqtt.Message) {
 	var ot OTData
-	json.Unmarshal(msg.Payload(), &ot)
-	fmt.Printf("TOPIC: %s\n", msg.Topic())
-	fmt.Printf("MSG: %v\n", ot.Temperature)
+	if err := json.Unmarshal(msg.Payload(), &ot); err != nil {
+		log.Printf("Error decoding OT data: %v", err)
+		return
+	}
+
+	it, err := fetchITData()
+	if err != nil {
+		log.Printf("Error fetching IT data: %v", err)
+		return
+	}
+
+	uns := UNSData{
+		Topic:     msg.Topic(),
+		TimeStamp: time.Now().Format(time.StampMilli), // placeholder format for now
+		OT:        ot,
+		IT:        it,
+	}
+
+	uns_json, _ := json.MarshalIndent(uns, "\t", "")
+	fmt.Printf("UNS payload: %s\n", string(uns_json))
+	//fmt.Printf("TOPIC: %s\n", msg.Topic())
+	//fmt.Printf("MSG: %v\n", msg.Payload())
 }
 
 func startUNSListener(brokerURL string) {

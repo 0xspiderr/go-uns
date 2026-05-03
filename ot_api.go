@@ -27,8 +27,10 @@ func startOTPublisher(brokerURL string) {
 	fmt.Println("OT publishing to %s\n", topic)
 
 	for {
+		rawTemp := 45.0 + (rand.Float64() * 4.0)
+		roundedTemp := float64(int(rawTemp*10)) / 10
 		data := OTData{
-			Temperature: 45.0 + rand.Float64(),
+			Temperature: roundedTemp,
 			IsRunning:   true,
 			MotorRPM:    1000 + rand.Intn(50),
 		}
