@@ -24,8 +24,9 @@ func startOTPublisher(brokerURL string) {
 	}
 
 	topic := "assembly_line/plc_01/data"
-	fmt.Println("OT publishing to %s\n", topic)
+	fmt.Printf("OT publishing to %s\n", topic)
 
+	// publish mock data every 5 seconds
 	for {
 		rawTemp := 45.0 + (rand.Float64() * 4.0)
 		roundedTemp := float64(int(rawTemp*10)) / 10
@@ -36,7 +37,6 @@ func startOTPublisher(brokerURL string) {
 		}
 		payload, _ := json.Marshal(data)
 		client.Publish(topic, 0, false, payload).Wait()
-		// publish mock data every 5 seconds
 		time.Sleep(5 * time.Second)
 	}
 }

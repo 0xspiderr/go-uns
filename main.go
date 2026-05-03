@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/joho/godotenv"
 )
 
 // unified namespace data from the IT and OT level
@@ -19,18 +19,6 @@ type UNSData struct {
 	Topic     string `json:"topic"`
 	OT        OTData `json:"ot_data"`
 	IT        ITData `json:"it_data"`
-}
-
-func fetchITData() (ITData, error) {
-	var it ITData
-	response, err := http.Get("http://localhost:8089/api/orders")
-	if err != nil {
-		return it, err
-	}
-	defer response.Body.Close()
-
-	err = json.NewDecoder(response.Body).Decode(&it)
-	return it, err
 }
 
 func mqttMsgHandler(client mqtt.Client, msg mqtt.Message) {
@@ -53,6 +41,7 @@ func mqttMsgHandler(client mqtt.Client, msg mqtt.Message) {
 		IT:        it,
 	}
 
+	insertUNSData(uns)
 	uns_json, _ := json.MarshalIndent(uns, "\t", "")
 	fmt.Printf("UNS payload: %s\n", string(uns_json))
 	//fmt.Printf("TOPIC: %s\n", msg.Topic())
@@ -75,11 +64,17 @@ func startUNSListener(brokerURL string) {
 }
 
 func main() {
-	const brokerURL string = "tcp://localhost:1883"
-	go startERPServer()
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Couldn't load .env file")
+	}
+
+	brokerURL := os.Getenv("MQTT_BROKER_URL")
+
+	go startITServer()
 	go startOTPublisher(brokerURL)
 	startUNSListener(brokerURL)
-
+	configureDB()
 	// block the main routine to let the program listen for messages
 	signalChannel := make(chan os.Signal, 1)
 	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
