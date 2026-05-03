@@ -2,8 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -60,6 +58,7 @@ func itDataHandler(w http.ResponseWriter, r *http.Request) {
 }
 */
 
+/* IT mock server
 func startITServer() {
 	http.HandleFunc("/api/orders", itDataHandler)
 	fmt.Println("Started HTTP server running on http://localhost:8089/api/orders")
@@ -67,3 +66,4 @@ func startITServer() {
 		log.Fatalf("Starting HTTP server failed: %v", err)
 	}
 }
+*/

@@ -71,7 +71,7 @@ func main() {
 
 	brokerURL := os.Getenv("MQTT_BROKER_URL")
 
-	go startITServer()
+	// go startITServer()
 	go startOTPublisher(brokerURL)
 	startUNSListener(brokerURL)
 	configureDB()
