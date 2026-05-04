@@ -24,8 +24,9 @@ func configureDB() {
 	port := os.Getenv("DB_PORT")
 	user := os.Getenv("DB_USER")
 	pass := os.Getenv("DB_PASSWORD")
+	ssl := os.Getenv("DB_SSLMODE")
 	dbName := os.Getenv("DB_NAME")
-	connString := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s", host, port, user, pass, dbName)
+	connString := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", host, port, user, pass, dbName, ssl)
 
 	db, err = sql.Open("postgres", connString)
 	if err != nil {

@@ -5,20 +5,6 @@ import (
 	"net/http"
 )
 
-type OrderStatus int
-
-const (
-	Pending OrderStatus = iota
-	Completed
-	InProgress
-)
-
-var orderStatusName = map[OrderStatus]string{
-	Pending:    "pending",
-	Completed:  "completed",
-	InProgress: "in_progress",
-}
-
 type Order struct {
 	OrderID         int    `json:"id,string"`
 	OrderName       string `json:"order_name"`
