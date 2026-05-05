@@ -22,8 +22,8 @@ func startOTPublisher(brokerURL string) {
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		log.Fatalf("Failed to start OT publisher: %v", token.Error())
 	}
-
-	topic := "assembly_line/plc_01/data"
+	// ISA-95 standard Enterpries/Site/Area/ProductionLine/WorkCell
+	topic := "Enterprise/Timisoara/Assembly/Line_01/PLC_01"
 	fmt.Printf("OT publishing to %s\n", topic)
 
 	// publish mock data every 5 seconds
