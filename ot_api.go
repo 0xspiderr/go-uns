@@ -11,9 +11,9 @@ import (
 )
 
 type OTData struct {
-	Temperature float64 `json:"temperature"`
-	IsRunning   bool    `json:"is_running"`
-	MotorRPM    int     `json:"motor_rpm"`
+	Temperature   float64 `json:"temperature"`
+	IsRunning     bool    `json:"is_running"`
+	ConveyorSpeed int     `json:"conveyor_speed"` // in m/s
 }
 
 func startOTPublisher(brokerURL string) {
@@ -31,9 +31,9 @@ func startOTPublisher(brokerURL string) {
 		rawTemp := 45.0 + (rand.Float64() * 4.0)
 		roundedTemp := float64(int(rawTemp*10)) / 10
 		data := OTData{
-			Temperature: roundedTemp,
-			IsRunning:   true,
-			MotorRPM:    1000 + rand.Intn(50),
+			Temperature:   roundedTemp,
+			IsRunning:     true,
+			ConveyorSpeed: 50 + rand.Intn(50),
 		}
 		payload, _ := json.Marshal(data)
 		client.Publish(topic, 0, false, payload).Wait()

@@ -33,8 +33,15 @@ func configureDB() {
 		log.Fatalf("Couldn't open db: %v", err)
 	}
 
-	if err = db.Ping(); err != nil {
-		log.Fatalf("Couldn't connect to the db: %v", err)
+	// retry database connection every 5 seconds and hang program until the connection is established
+	for {
+		if err = db.Ping(); err != nil {
+			log.Println("Couldn't establish connection to the DB, retrying...")
+		}
+		if err == nil {
+			break
+		}
+		time.Sleep(5 * time.Second)
 	}
 
 	fmt.Println("DB connection successful")

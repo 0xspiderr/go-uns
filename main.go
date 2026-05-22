@@ -71,10 +71,10 @@ func main() {
 
 	brokerURL := os.Getenv("MQTT_BROKER_URL")
 
+	configureDB()
 	// go startITServer()
 	go startOTPublisher(brokerURL)
 	startUNSListener(brokerURL)
-	configureDB()
 	// block the main routine to let the program listen for messages
 	signalChannel := make(chan os.Signal, 1)
 	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
