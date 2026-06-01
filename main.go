@@ -15,18 +15,23 @@ import (
 
 // unified namespace data from the IT and OT level
 type UNSData struct {
-	TimeStamp string `json:"timestamp"`
-	Topic     string `json:"topic"`
-	OT        OTData `json:"ot_data"`
-	IT        ITData `json:"it_data"`
+	TimeStamp string          `json:"timestamp"`
+	Topic     string          `json:"topic"`
+	OT        json.RawMessage `json:"ot_data"`
+	IT        ITData          `json:"it_data"`
 }
 
 func mqttMsgHandler(client mqtt.Client, msg mqtt.Message) {
-	var ot OTData
-	if err := json.Unmarshal(msg.Payload(), &ot); err != nil {
-		log.Printf("Error decoding OT data: %v", err)
-		return
-	}
+	// OLD MOCK OT DATA
+	// var ot OTData
+	//if err := json.Unmarshal(msg.Payload(), &ot); err != nil {
+	//	log.Printf("Error decoding OT data: %v", err)
+	//	return
+	// }
+
+	log.Printf("New ot message received:\n")
+	log.Printf("Topic: %s\n", msg.Topic())
+	log.Printf("Raw payload: %s\n", string(msg.Payload()))
 
 	it, err := fetchITData()
 	if err != nil {
@@ -37,15 +42,13 @@ func mqttMsgHandler(client mqtt.Client, msg mqtt.Message) {
 	uns := UNSData{
 		Topic:     msg.Topic(),
 		TimeStamp: time.Now().Format(time.StampMilli), // placeholder format for now
-		OT:        ot,
+		OT:        msg.Payload(),
 		IT:        it,
 	}
 
 	insertUNSData(uns)
 	uns_json, _ := json.MarshalIndent(uns, "\t", "")
 	fmt.Printf("UNS payload: %s\n", string(uns_json))
-	//fmt.Printf("TOPIC: %s\n", msg.Topic())
-	//fmt.Printf("MSG: %v\n", msg.Payload())
 }
 
 func startUNSListener(brokerURL string) {
@@ -73,7 +76,7 @@ func main() {
 
 	configureDB()
 	// go startITServer()
-	go startOTPublisher(brokerURL)
+	// go startOTPublisher(brokerURL)
 	startUNSListener(brokerURL)
 	// block the main routine to let the program listen for messages
 	signalChannel := make(chan os.Signal, 1)

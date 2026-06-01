@@ -6,19 +6,19 @@ import (
 )
 
 type Order struct {
-	OrderID         int    `json:"id,string"`
-	OrderName       string `json:"order_name"`
-	Status          string `json:"order_status"`
-	ProductName     string `json:"product_name"`
-	Quantity        int    `json:"quantity"`
-	ActiveOperators int    `json:"active_operators"`
+	OrderID     int    `json:"id,int"`
+	OrderName   string `json:"order_name"`
+	Status      string `json:"order_status"`
+	ProductName string `json:"product_name"`
+	Quantity    int    `json:"quantity"`
+	//	ActiveOperators int    `json:"active_operators"`
 }
 
 type ITData []Order
 
 func fetchITData() (ITData, error) {
 	var it ITData
-	response, err := http.Get("http://localhost:3000/orders")
+	response, err := http.Get("http://localhost:8083/orders")
 	if err != nil {
 		return it, err
 	}
