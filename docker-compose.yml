@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # 1. The Database
+  db:
+    image: postgres:15-alpine
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-uns_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # The healthcheck ensures the DB is actually ready to accept connections, not just "started"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-uns_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # mqtt broker
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: mosquitto_broker
+    command: mosquitto -p 1884 -v -c /mosquitto/config/mosquitto_config.conf
+    ports:
+      - "1884:1884"
+    volumes:
+      - ./mosquitto_config.conf:/mosquitto/config/mosquitto_config.conf:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+
+  # go uns
+  uns-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: go_uns_app
+    env_file:
+      - .env
+    depends_on:
+      mosquitto:
+        condition: service_started
+      db:
+        condition: service_healthy # Waits for the DB healthcheck to pass
+
+volumes:
+  pgdata:
+  mosquitto_data:
+  mosquitto_log:

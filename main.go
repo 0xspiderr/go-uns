@@ -14,14 +14,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// unified namespace data from the IT and OT level
-type UNSData struct {
-	TimeStamp string          `json:"timestamp"`
-	Topic     string          `json:"topic"`
-	OT        json.RawMessage `json:"ot_data"`
-	IT        ITData          `json:"it_data"`
-}
-
 var otMessageChannel = make(chan mqtt.Message, 100)
 
 func unsWorker(workerID int, wg *sync.WaitGroup) {

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+
+	"github.com/0xspiderr/go-uns/internal/models"
 )
 
 // might remove this
@@ -20,8 +22,8 @@ var erpClient = &http.Client{
 //
 // }
 
-func FetchITData() (ITData, error) {
-	var it ITData
+func FetchITData() (models.ITData, error) {
+	var it models.ITData
 	response, err := erpClient.Get("http://localhost:8083/orders")
 	if err != nil {
 		return it, err
