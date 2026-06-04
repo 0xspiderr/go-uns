@@ -14,6 +14,14 @@ type Order struct {
 	//	ActiveOperators int    `json:"active_operators"`
 }
 
+// Pentru comunicare ERP -> UNS -> OT
+// structura cu:
+// number of parts
+// cmd start/stop
+// conveyor number
+// type ERPCommand {
+//
+// }
 type ITData []Order
 
 func fetchITData() (ITData, error) {

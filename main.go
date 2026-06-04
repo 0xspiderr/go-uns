@@ -21,6 +21,32 @@ type UNSData struct {
 	IT        ITData          `json:"it_data"`
 }
 
+var otMessageChannel = make(chan mqtt.Message, 100)
+
+func unsWorker(workerID int) {
+	for msg := range otMessageChannel {
+		log.Printf("[worker %d] processing topic: %s\n", workerID, msg.Topic())
+
+		it, err := fetchITData()
+		if err != nil {
+			log.Printf("[worker %d] error fetching IT data: %v\n", workerID, err)
+			continue
+		}
+
+		uns := UNSData{
+			Topic:     msg.Topic(),
+			TimeStamp: time.Now().Format(time.RFC3339),
+			OT:        msg.Payload(),
+			IT:        it,
+		}
+
+		err = insertUNSData(uns)
+		if err != nil {
+			log.Printf("[worker %d] failed to insert UNS data: %v\n", workerID, err)
+		}
+	}
+}
+
 func mqttMsgHandler(client mqtt.Client, msg mqtt.Message) {
 	// OLD MOCK OT DATA
 	// var ot OTData
@@ -29,26 +55,32 @@ func mqttMsgHandler(client mqtt.Client, msg mqtt.Message) {
 	//	return
 	// }
 
-	log.Printf("New ot message received:\n")
-	log.Printf("Topic: %s\n", msg.Topic())
-	log.Printf("Raw payload: %s\n", string(msg.Payload()))
+	//log.Printf("New ot message received:\n")
+	//log.Printf("Topic: %s\n", msg.Topic())
+	//log.Printf("Raw payload: %s\n", string(msg.Payload()))
 
-	it, err := fetchITData()
-	if err != nil {
-		log.Printf("Error fetching IT data: %v", err)
-		return
+	//it, err := fetchITData()
+	//if err != nil {
+	//	log.Printf("Error fetching IT data: %v", err)
+	//	return
+	//}
+
+	//uns := UNSData{
+	//	Topic:     msg.Topic(),
+	//	TimeStamp: time.Now().Format(time.StampMilli), // placeholder format for now
+	//	OT:        msg.Payload(),
+	//	IT:        it,
+	//}
+
+	//insertUNSData(uns)
+	//uns_json, _ := json.MarshalIndent(uns, "\t", "")
+	//fmt.Printf("UNS payload: %s\n", string(uns_json))
+	select {
+	case otMessageChannel <- msg:
+	default:
+		log.Printf("message channel full!")
+
 	}
-
-	uns := UNSData{
-		Topic:     msg.Topic(),
-		TimeStamp: time.Now().Format(time.StampMilli), // placeholder format for now
-		OT:        msg.Payload(),
-		IT:        it,
-	}
-
-	insertUNSData(uns)
-	uns_json, _ := json.MarshalIndent(uns, "\t", "")
-	fmt.Printf("UNS payload: %s\n", string(uns_json))
 }
 
 func startUNSListener(brokerURL string) {
@@ -77,6 +109,12 @@ func main() {
 	configureDB()
 	// go startITServer()
 	// go startOTPublisher(brokerURL)
+
+	// start go routines for uns workers
+	numWorkers := 2
+	for i := 1; i <= numWorkers; i++ {
+		go unsWorker(i)
+	}
 	startUNSListener(brokerURL)
 	// block the main routine to let the program listen for messages
 	signalChannel := make(chan os.Signal, 1)
