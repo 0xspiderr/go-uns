@@ -1,8 +1,10 @@
 package mqtt
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -26,16 +28,40 @@ func unsWorker(workerID int, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	for msg := range otMessageChannel {
-		it, err := erp.FetchITData()
+		var dynamicOT map[string]any
+		if err := json.Unmarshal(msg.Payload(), &dynamicOT); err != nil {
+			log.Printf("[Worker %d] Failed to parse OT JSON: %v", workerID, err)
+			continue
+		}
+
+		conveyorID := 1 // Default fallback
+		if nameVal, exists := dynamicOT["name"]; exists {
+			// Type assert that the value is actually a string
+			if nameStr, ok := nameVal.(string); ok {
+				if strings.Contains(nameStr, "Conveyor 2") {
+					conveyorID = 2
+				}
+			}
+		}
+
+		orders, err := erp.FetchITData()
 		if err != nil {
 			log.Printf("[Worker %d] WARNING: ERP unavailable, inserting without IT context. Error: %v", workerID, err)
+		}
+
+		var activeOrder models.Order
+		for _, order := range orders {
+			if order.ConveyorID == conveyorID {
+				activeOrder = order
+				break
+			}
 		}
 
 		uns := models.UNSData{
 			Topic:     msg.Topic(),
 			TimeStamp: time.Now().Format(time.RFC3339),
 			OT:        msg.Payload(),
-			IT:        it,
+			IT:        activeOrder,
 		}
 
 		if err := db.InsertUNSData(uns); err != nil {

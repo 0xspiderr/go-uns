@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -61,22 +62,25 @@ func createUNSTable() {
 }
 
 func InsertUNSData(data models.UNSData) error {
-	otJSON, err := json.Marshal(data.OT)
-	if err != nil {
-		return fmt.Errorf("Failed to marshal OT data: %w", err)
-	}
+	//otJSON, err := json.Marshal(data.OT)
+	//if err != nil {
+	//	return fmt.Errorf("Failed to marshal OT data: %w", err)
+	//}
 
 	itJSON, err := json.Marshal(data.IT)
 	if err != nil {
 		return fmt.Errorf("Failed to marshal IT data: %w", err)
 	}
-
+	// Scrub the OT payload to guarantee it is valid UTF-8 text
+	cleanOT := strings.ToValidUTF8(string(data.OT), "")
+	// 2. Strip the Null byte (0x00) which PostgreSQL strictly rejects
+	cleanOT = strings.ReplaceAll(cleanOT, "\x00", "")
 	query := `
 	INSERT INTO uns_data (event_timestamp, topic, ot_data, it_data)
 	VALUES ($1, $2, $3, $4)
 	`
 
-	_, err = dbConn.Exec(query, time.Now(), data.Topic, otJSON, itJSON)
+	_, err = dbConn.Exec(query, time.Now(), data.Topic, cleanOT, itJSON)
 	if err != nil {
 		return fmt.Errorf("Failed to insert UNS data: %w", err)
 	}

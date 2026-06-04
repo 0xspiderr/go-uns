@@ -22,17 +22,17 @@ var erpClient = &http.Client{
 //
 // }
 
-func FetchITData() (models.ITData, error) {
-	var it models.ITData
-	response, err := erpClient.Get("http://localhost:8083/orders")
+func FetchITData() ([]models.Order, error) {
+	var orders []models.Order
+	response, err := erpClient.Get("http://192.168.1.13:8083/orders")
 	if err != nil {
-		return it, err
+		return orders, err
 	}
 	// debug response
 	defer response.Body.Close()
-	err = json.NewDecoder(response.Body).Decode(&it)
+	err = json.NewDecoder(response.Body).Decode(&orders)
 
-	return it, err
+	return orders, err
 }
 
 /* IT mock data
