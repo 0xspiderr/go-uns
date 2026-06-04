@@ -16,6 +16,7 @@ type OTData struct {
 	ConveyorSpeed int     `json:"conveyor_speed"` // in m/s
 }
 
+// DEPRECATED
 func startOTPublisher(brokerURL string) {
 	options := mqtt.NewClientOptions().AddBroker(brokerURL).SetClientID("plc_01")
 	client := mqtt.NewClient(options)

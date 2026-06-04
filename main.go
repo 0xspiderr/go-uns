@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -23,14 +24,17 @@ type UNSData struct {
 
 var otMessageChannel = make(chan mqtt.Message, 100)
 
-func unsWorker(workerID int) {
+func unsWorker(workerID int, wg *sync.WaitGroup) {
+	// ensure that when the channel is closed, the loop exits and the wwaitgroup is decremented
+	defer wg.Done()
+
 	for msg := range otMessageChannel {
 		log.Printf("[worker %d] processing topic: %s\n", workerID, msg.Topic())
 
 		it, err := fetchITData()
+		// log that the ERP is down, but insert the OT data anyway.
 		if err != nil {
 			log.Printf("[worker %d] error fetching IT data: %v\n", workerID, err)
-			continue
 		}
 
 		uns := UNSData{
@@ -45,6 +49,8 @@ func unsWorker(workerID int) {
 			log.Printf("[worker %d] failed to insert UNS data: %v\n", workerID, err)
 		}
 	}
+
+	log.Printf("[worker %d] shutdown\n", workerID)
 }
 
 func mqttMsgHandler(client mqtt.Client, msg mqtt.Message) {
@@ -83,7 +89,7 @@ func mqttMsgHandler(client mqtt.Client, msg mqtt.Message) {
 	}
 }
 
-func startUNSListener(brokerURL string) {
+func startUNSListener(brokerURL string) mqtt.Client {
 	options := mqtt.NewClientOptions().AddBroker(brokerURL)
 	client := mqtt.NewClient(options)
 	// connect the client to the broker
@@ -96,6 +102,7 @@ func startUNSListener(brokerURL string) {
 	}
 
 	fmt.Println("UNS listener started successfully")
+	return client
 }
 
 func main() {
@@ -110,14 +117,31 @@ func main() {
 	// go startITServer()
 	// go startOTPublisher(brokerURL)
 
+	var wg sync.WaitGroup
+
 	// start go routines for uns workers
 	numWorkers := 2
 	for i := 1; i <= numWorkers; i++ {
-		go unsWorker(i)
+		wg.Add(1)
+		go unsWorker(i, &wg)
 	}
-	startUNSListener(brokerURL)
+
+	mqttClient := startUNSListener(brokerURL)
 	// block the main routine to let the program listen for messages
 	signalChannel := make(chan os.Signal, 1)
 	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
 	<-signalChannel
+
+	log.Println("shutdown signal received, disconnecting mqtt client")
+	mqttClient.Disconnect(1000)
+	close(otMessageChannel)
+
+	log.Println("waiting for workers to finish processing pending messages...")
+	wg.Wait()
+
+	log.Println("closing database...")
+	if db != nil {
+		db.Close()
+
+	}
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 )
 
 type Order struct {
@@ -12,6 +13,10 @@ type Order struct {
 	ProductName string `json:"product_name"`
 	Quantity    int    `json:"quantity"`
 	//	ActiveOperators int    `json:"active_operators"`
+}
+
+var erpClient = &http.Client{
+	Timeout: 5 * time.Second,
 }
 
 // Pentru comunicare ERP -> UNS -> OT
@@ -26,7 +31,7 @@ type ITData []Order
 
 func fetchITData() (ITData, error) {
 	var it ITData
-	response, err := http.Get("http://localhost:8083/orders")
+	response, err := erpClient.Get("http://localhost:8083/orders")
 	if err != nil {
 		return it, err
 	}
