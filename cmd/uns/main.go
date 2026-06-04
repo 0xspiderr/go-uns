@@ -16,7 +16,7 @@ import (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Couldn't load .env file")
+		log.Println("Couldn't load .env file")
 	}
 
 	brokerURL := os.Getenv("MQTT_BROKER_URL")

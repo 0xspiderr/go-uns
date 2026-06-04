@@ -8,7 +8,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 
 	"github.com/0xspiderr/go-uns/internal/models"
@@ -17,10 +16,6 @@ import (
 var dbConn *sql.DB
 
 func ConfigureDB() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Couldn't load .env variables: %v", err)
-	}
 
 	host := os.Getenv("DB_HOST")
 	port := os.Getenv("DB_PORT")
@@ -29,7 +24,7 @@ func ConfigureDB() {
 	ssl := os.Getenv("DB_SSLMODE")
 	dbName := os.Getenv("DB_NAME")
 	connString := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", host, port, user, pass, dbName, ssl)
-
+	var err error
 	dbConn, err = sql.Open("postgres", connString)
 	if err != nil {
 		log.Fatalf("Couldn't open db: %v", err)

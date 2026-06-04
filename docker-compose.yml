@@ -1,52 +1,59 @@
 version: '3.8'
 
 services:
-  # 1. The Database
+  # 1. The PostgreSQL Database
   db:
     image: postgres:15-alpine
-    container_name: postgres_db
+    container_name: uns_db
     environment:
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-      POSTGRES_DB: ${DB_NAME:-uns_db}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
-    # The healthcheck ensures the DB is actually ready to accept connections, not just "started"
+      - pgdata_secure:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-uns_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  # mqtt broker
+  # 2. pgAdmin (Web Interface for Postgres)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: uns_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@uns.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # 3. The Mosquitto MQTT Broker
   mosquitto:
     image: eclipse-mosquitto:latest
-    container_name: mosquitto_broker
-    command: mosquitto -p 1884 -v -c /mosquitto/config/mosquitto_config.conf
+    container_name: uns_broker
     ports:
       - "1884:1884"
     volumes:
-      - ./mosquitto_config.conf:/mosquitto/config/mosquitto_config.conf:ro
-      - mosquitto_data:/mosquitto/data
-      - mosquitto_log:/mosquitto/log
+      - ./mosquitto_config.conf:/mosquitto/config/mosquitto.conf:ro
 
-  # go uns
+  # 4. Your Go Application
   uns-app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: go_uns_app
+    container_name: uns_middleware
     env_file:
       - .env
     depends_on:
       mosquitto:
         condition: service_started
       db:
-        condition: service_healthy # Waits for the DB healthcheck to pass
+        condition: service_healthy
 
 volumes:
-  pgdata:
-  mosquitto_data:
-  mosquitto_log:
+  pgdata_secure:
