@@ -24,7 +24,8 @@ var erpClient = &http.Client{
 
 func FetchITData() ([]models.Order, error) {
 	var orders []models.Order
-	response, err := erpClient.Get("http://192.168.1.13:8083/orders")
+	// The ip address of the ERP and endpoint to fetch the order data
+	response, err := erpClient.Get("http://25.10.202.120:8083/orders")
 	if err != nil {
 		return orders, err
 	}
