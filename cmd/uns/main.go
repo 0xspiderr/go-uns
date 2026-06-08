@@ -10,6 +10,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/0xspiderr/go-uns/internal/db"
+	"github.com/0xspiderr/go-uns/internal/erp"
 	"github.com/0xspiderr/go-uns/internal/mqtt"
 )
 
@@ -28,6 +29,10 @@ func main() {
 	mqtt.InitWorkers(2, &wg)
 
 	mqttClient := mqtt.StartListener(brokerURL)
+
+	// start ERP listener on port 10000
+	go erp.StartServer("10000", mqttClient)
+
 	// block the main routine to let the program listen for messages
 	signalChannel := make(chan os.Signal, 1)
 	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)

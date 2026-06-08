@@ -2,11 +2,12 @@ package erp
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/0xspiderr/go-uns/internal/models"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"log"
 	"net/http"
 	"time"
-
-	"github.com/0xspiderr/go-uns/internal/models"
 )
 
 // might remove this
@@ -14,14 +15,9 @@ var erpClient = &http.Client{
 	Timeout: 5 * time.Second,
 }
 
-// Pentru comunicare ERP -> UNS -> OT
-// structura cu:
-// number of parts
-// cmd start/stop
-// conveyor number
-// type ERPCommand {
-//
-// }
+type Server struct {
+	MQTTClient mqtt.Client
+}
 
 func FetchITData() ([]models.Order, error) {
 	var orders []models.Order
@@ -37,7 +33,7 @@ func FetchITData() ([]models.Order, error) {
 	return orders, err
 }
 
-func HandleNewOrder(w http.ResponseWriter, r *http.Request) {
+func (s *Server) HandleNewOrder(w http.ResponseWriter, r *http.Request) {
 	// ensure POST request
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed, ERP should send POST", http.StatusMethodNotAllowed)
@@ -55,6 +51,25 @@ func HandleNewOrder(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Received new order from the ERP: [%s] for %d units of %s", newOrder.OrderName, newOrder.Quantity, newOrder.ProductName)
 
+	// encode payload back to JSON
+	otPayload, err := json.Marshal(newOrder)
+	if err != nil {
+		http.Error(w, "Failed to encode OT payload", http.StatusInternalServerError)
+		return
+	}
+
+	// the topic to publish on the broker for the OT layer
+	commandTopic := fmt.Sprintf("Enterprise/Timisoara/Assembly/Line_01/PLC_0%d/Command", newOrder.ConveyorID)
+	// publish to mosquitto with QoS 1 for guaranteed delivery
+	req := s.MQTTClient.Publish(commandTopic, 1, false, otPayload)
+	req.Wait()
+	if req.Error() != nil {
+		log.Printf("failed to send order to the OT layer: %v", req.Error())
+		http.Error(w, "failed to contact OT layer", http.StatusBadGateway)
+		return
+	}
+	log.Printf("successfully sent order to OT via MQTT: %s to topic:%s", newOrder.OrderName, commandTopic)
+
 	// send response back to ERP so they know we got the order
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -65,9 +80,12 @@ func HandleNewOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 // listening server for the ERP
-func StartServer(port string) {
+func StartServer(port string, client mqtt.Client) {
+	apiServer := &Server{
+		MQTTClient: client,
+	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/orders", HandleNewOrder)
+	mux.HandleFunc("/api/orders", apiServer.HandleNewOrder)
 
 	log.Printf("Starting UNS HTTP Server on port %s", port)
 	if err := http.ListenAndServe(":"+port, mux); err != nil {
