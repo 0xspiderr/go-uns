@@ -2,6 +2,7 @@ package erp
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -34,6 +35,44 @@ func FetchITData() ([]models.Order, error) {
 	err = json.NewDecoder(response.Body).Decode(&orders)
 
 	return orders, err
+}
+
+func HandleNewOrder(w http.ResponseWriter, r *http.Request) {
+	// ensure POST request
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed, ERP should send POST", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// decode incoming order
+	var newOrder models.Order
+	if err := json.NewDecoder(r.Body).Decode(&newOrder); err != nil {
+		log.Printf("Failed to decode ERP payload: %v", err)
+		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	log.Printf("Received new order from the ERP: [%s] for %d units of %s", newOrder.OrderName, newOrder.Quantity, newOrder.ProductName)
+
+	// send response back to ERP so they know we got the order
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "order successfully received by the UNS",
+		"status":  "received",
+	})
+}
+
+// listening server for the ERP
+func StartServer(port string) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/orders", HandleNewOrder)
+
+	log.Printf("Starting UNS HTTP Server on port %s", port)
+	if err := http.ListenAndServe(":"+port, mux); err != nil {
+		log.Fatalf("HTTP server crashed: %v", err)
+	}
 }
 
 /* IT mock data
