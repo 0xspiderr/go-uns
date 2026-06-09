@@ -4,7 +4,7 @@
     
     # Data flow
     
-                                                             
+ ```text                                                            
 ┌─────────────────────────┐                              
 │                         │                              
 │OT Layer(SCADA Ignition) ◄──┐                           
@@ -36,7 +36,7 @@
 │   Postgresql Database   │                              
 │                         │                              
 └─────────────────────────┘                              
-                                                                 
+ ```                                           
     Diagram made with https://asciiflow.com/#/
     
     # Considerations
