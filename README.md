@@ -1,6 +1,6 @@
 # Introduction
     
-This project aims to unify data from the IT level(ERP) with the OT level(Ignition/factory floor) through a common middleware(the UNS).
+&nbsp;This project aims to unify data from the IT level(ERP) with the OT level(Ignition/factory floor) through a common middleware(the UNS).
     
 # Data flow
 
@@ -37,12 +37,12 @@ This project aims to unify data from the IT level(ERP) with the OT level(Ignitio
 │                         │                             
 └─────────────────────────┘                             
 ```
- Diagram made with https://asciiflow.com/#/
+&nbsp;Diagram made with https://asciiflow.com/#/
     
 # Considerations
     
-Using this architecture, the UNS made with Go acts like a server in a client-server application. The app gets MQTT messages from the OT level and fetches the corresponding ERP order data for each conveyor(the OT level uses a PLC simulator) then pushes the new data to a Postgresql DB with a timestamp for when it was pushed and timestamps from the OT level and ERP. The timestamp format used is RFC3339.\
-The ERP can also make order requests and send them to the UNS through HTTP and then the UNS forwards it to the MQTT broker.\When the OT finishes processing the order it sends a message to the broker and the UNS picks it up and forwards it to the ERP so it can update it's web UI.
+&nbsp;Using this architecture, the UNS made with Go acts like a server in a client-server application. The app gets MQTT messages from the OT level and fetches the corresponding ERP order data for each conveyor(the OT level uses a PLC simulator) then pushes the new data to a Postgresql DB with a timestamp for when it was pushed and timestamps from the OT level and ERP. The timestamp format used is RFC3339.\
+&nbsp;The ERP can also make order requests and send them to the UNS through HTTP and then the UNS forwards it to the MQTT broker.\When the OT finishes processing the order it sends a message to the broker and the UNS picks it up and forwards it to the ERP so it can update it's web UI.
                                                              
 # Usage
     
@@ -50,10 +50,11 @@ git clone <this_project_url>\
 cd <this_project_url>\
 touch .env(edit .env file with required env variables)\
 docker compose up --build\
- -> localhost:5050 to access db\
- -> development credentials: admin@uns.com admin\
+-> localhost:5050 to access db\
+ 
+-> development credentials: admin@uns.com admin\
      
- # Requirements
+# Requirements
     
 docker desktop && docker\
 postgresql && pgadmin\
