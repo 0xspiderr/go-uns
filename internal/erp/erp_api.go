@@ -3,11 +3,12 @@ package erp
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/0xspiderr/go-uns/internal/models"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/0xspiderr/go-uns/internal/models"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 // might remove this
@@ -44,31 +45,39 @@ func (s *Server) HandleNewOrder(w http.ResponseWriter, r *http.Request) {
 	var newOrder models.Order
 	if err := json.NewDecoder(r.Body).Decode(&newOrder); err != nil {
 		log.Printf("Failed to decode ERP payload: %v", err)
-		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
 
 	log.Printf("Received new order from the ERP: [%s] for %d units of %s", newOrder.OrderName, newOrder.Quantity, newOrder.ProductName)
 
-	// encode payload back to JSON
-	otPayload, err := json.Marshal(newOrder)
-	if err != nil {
-		http.Error(w, "Failed to encode OT payload", http.StatusInternalServerError)
-		return
+	ignitionConveyorName := "Conveyor" // Default to Conveyor 1
+	if newOrder.ConveyorID == 2 {
+		ignitionConveyorName = "Conveyor 2"
 	}
 
 	// the topic to publish on the broker for the OT layer
-	commandTopic := fmt.Sprintf("Enterprise/Timisoara/Assembly/Line_01/PLC_0%d/Command", newOrder.ConveyorID)
+	numProducts := fmt.Sprintf("unsAv1.0/%s/Number_of_Products", ignitionConveyorName)
+	orderMqtt := fmt.Sprintf("unsAv1.0/%s/Order_from_MQTT", ignitionConveyorName)
+	numProductsPayload := fmt.Sprintf("%d", newOrder.Quantity)
+
 	// publish to mosquitto with QoS 1 for guaranteed delivery
-	req := s.MQTTClient.Publish(commandTopic, 1, false, otPayload)
-	req.Wait()
-	if req.Error() != nil {
-		log.Printf("failed to send order to the OT layer: %v", req.Error())
-		http.Error(w, "failed to contact OT layer", http.StatusBadGateway)
+	tokenQty := s.MQTTClient.Publish(numProducts, 1, false, numProductsPayload)
+	tokenQty.Wait()
+	if tokenQty.Error() != nil {
+		log.Printf("Failed to push quantity to %s: %v", numProducts, tokenQty.Error())
+		http.Error(w, "Failed to contact OT layer", http.StatusBadGateway)
 		return
 	}
-	log.Printf("successfully sent order to OT via MQTT: %s to topic:%s", newOrder.OrderName, commandTopic)
+
+	tokenName := s.MQTTClient.Publish(orderMqtt, 1, false, newOrder.OrderName)
+	tokenName.Wait()
+	if tokenName.Error() != nil {
+		log.Printf("Failed to push order name to %s: %v", orderMqtt, tokenName.Error())
+		http.Error(w, "Failed to contact OT layer", http.StatusBadGateway)
+		return
+	}
 
 	// send response back to ERP so they know we got the order
 	w.Header().Set("Content-Type", "application/json")

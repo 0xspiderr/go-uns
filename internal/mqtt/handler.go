@@ -28,20 +28,29 @@ func unsWorker(workerID int, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	for msg := range otMessageChannel {
-		var dynamicOT map[string]any
-		if err := json.Unmarshal(msg.Payload(), &dynamicOT); err != nil {
-			log.Printf("[Worker %d] Failed to parse OT JSON: %v", workerID, err)
-			continue
+		topic := msg.Topic()
+		conveyorID := 1 // Default fallback
+
+		if strings.Contains(topic, "Container 2") {
+			conveyorID = 2
+
 		}
 
-		conveyorID := 1 // Default fallback
-		if nameVal, exists := dynamicOT["name"]; exists {
-			// Type assert that the value is actually a string
-			if nameStr, ok := nameVal.(string); ok {
-				if strings.Contains(nameStr, "Conveyor 2") {
-					conveyorID = 2
+		var dynamicOT map[string]any
+		if err := json.Unmarshal(msg.Payload(), &dynamicOT); err != nil {
+			log.Println("Got MQTT command to send to broker")
+		} else {
+			if nameVal, exists := dynamicOT["name"]; exists {
+				if nameStr, ok := nameVal.(string); ok {
+					if strings.Contains(nameStr, "Conveyor 2") {
+						conveyorID = 2
+
+					}
+
 				}
+
 			}
+
 		}
 
 		orders, err := erp.FetchITData()
